@@ -235,7 +235,7 @@ main (int argc, char** argv)
     return 0;
   }
   bool simple(false), rgb(false), custom_c(false), normals(false),
-    shapes(false), viewports(false), interaction_customization(false);
+    shapes(false), viewports(false), interaction_customization(false), open_file(false);
   if (pcl::console::find_argument (argc, argv, "-s") >= 0)
   {
     simple = true;
@@ -271,6 +271,12 @@ main (int argc, char** argv)
     interaction_customization = true;
     std::cout << "Interaction Customization example\n";
   }
+  else if (pcl::console::find_argument (argc, argv, "-o") >= 0)
+  {
+    open_file = true;
+    simple = true;
+    std::cout << "Open the following PCD file: bala\n";
+  }
   else
   {
     printUsage (argv[0]);
@@ -278,71 +284,93 @@ main (int argc, char** argv)
   }
 
   // ------------------------------------
+  // -----Open a PCD file ---------------
+
+  pcl::PointCloud<pcl::PointXYZ>::Ptr cloud (new pcl::PointCloud<pcl::PointXYZ>);
+
+  if (open_file)
+  {
+    if (pcl::io::loadPCDFile<pcl::PointXYZ> ("/home/ahestevenz/cloud.pcd", *cloud) == -1) //* load the file
+    {
+      PCL_ERROR ("Couldn't read file cloud.pcd \n");
+      return (-1);
+    }
+    std::cout << "Loaded "
+              << cloud->width * cloud->height
+              << " data points from test_pcd.pcd with the following fields: "
+              << std::endl;
+    for (size_t i = 0; i < cloud->points.size (); ++i)
+      std::cout << "    " << cloud->points[i].x
+                << " "    << cloud->points[i].y
+                << " "    << cloud->points[i].z << std::endl;
+  }
+
+  // ------------------------------------
   // -----Create example point cloud-----
   // ------------------------------------
   pcl::PointCloud<pcl::PointXYZ>::Ptr basic_cloud_ptr (new pcl::PointCloud<pcl::PointXYZ>);
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr point_cloud_ptr (new pcl::PointCloud<pcl::PointXYZRGB>);
-  std::cout << "Genarating example point clouds.\n\n";
+  //std::cout << "Genarating example point clouds.\n\n";
   // We're going to make an ellipse extruded along the z-axis. The colour for
   // the XYZRGB cloud will gradually go from red to green to blue.
-  uint8_t r(255), g(15), b(15);
-  for (float z(-1.0); z <= 1.0; z += 0.05)
-  {
-    for (float angle(0.0); angle <= 360.0; angle += 5.0)
-    {
-      pcl::PointXYZ basic_point;
-      basic_point.x = 0.5 * cosf (pcl::deg2rad(angle));
-      basic_point.y = sinf (pcl::deg2rad(angle));
-      basic_point.z = z;
-      basic_cloud_ptr->points.push_back(basic_point);
-
-      pcl::PointXYZRGB point;
-      point.x = basic_point.x;
-      point.y = basic_point.y;
-      point.z = basic_point.z;
-      uint32_t rgb = (static_cast<uint32_t>(r) << 16 |
-              static_cast<uint32_t>(g) << 8 | static_cast<uint32_t>(b));
-      point.rgb = *reinterpret_cast<float*>(&rgb);
-      point_cloud_ptr->points.push_back (point);
-    }
-    if (z < 0.0)
-    {
-      r -= 12;
-      g += 12;
-    }
-    else
-    {
-      g -= 12;
-      b += 12;
-    }
-  }
-  basic_cloud_ptr->width = (int) basic_cloud_ptr->points.size ();
-  basic_cloud_ptr->height = 1;
-  point_cloud_ptr->width = (int) point_cloud_ptr->points.size ();
-  point_cloud_ptr->height = 1;
-
-  // ----------------------------------------------------------------
-  // -----Calculate surface normals with a search radius of 0.05-----
-  // ----------------------------------------------------------------
-  pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;
-  ne.setInputCloud (point_cloud_ptr);
-  pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZRGB> ());
-  ne.setSearchMethod (tree);
-  pcl::PointCloud<pcl::Normal>::Ptr cloud_normals1 (new pcl::PointCloud<pcl::Normal>);
-  ne.setRadiusSearch (0.05);
-  ne.compute (*cloud_normals1);
-
-  // ---------------------------------------------------------------
-  // -----Calculate surface normals with a search radius of 0.1-----
-  // ---------------------------------------------------------------
-  pcl::PointCloud<pcl::Normal>::Ptr cloud_normals2 (new pcl::PointCloud<pcl::Normal>);
-  ne.setRadiusSearch (0.1);
-  ne.compute (*cloud_normals2);
+  //uint8_t r(255), g(15), b(15);
+  //for (float z(-1.0); z <= 1.0; z += 0.05)
+  //{
+    //for (float angle(0.0); angle <= 360.0; angle += 5.0)
+    //{
+//      pcl::PointXYZ basic_point;
+//      basic_point.x = 0.5 * cosf (pcl::deg2rad(angle));
+//      basic_point.y = sinf (pcl::deg2rad(angle));
+//      basic_point.z = z;
+//      basic_cloud_ptr->points.push_back(basic_point);
+//
+//      pcl::PointXYZRGB point;
+//      point.x = basic_point.x;
+//      point.y = basic_point.y;
+//      point.z = basic_point.z;
+//      uint32_t rgb = (static_cast<uint32_t>(r) << 16 |
+//              static_cast<uint32_t>(g) << 8 | static_cast<uint32_t>(b));
+//      point.rgb = *reinterpret_cast<float*>(&rgb);
+//      point_cloud_ptr->points.push_back (point);
+//    }
+//    if (z < 0.0)
+//    {
+//      r -= 12;
+//      g += 12;
+//    }
+//    else
+//    {
+//      g -= 12;
+//      b += 12;
+//    }
+//  }
+//  basic_cloud_ptr->width = (int) basic_cloud_ptr->points.size ();
+//  basic_cloud_ptr->height = 1;
+//  point_cloud_ptr->width = (int) point_cloud_ptr->points.size ();
+//  point_cloud_ptr->height = 1;
+//
+//  // ----------------------------------------------------------------
+//  // -----Calculate surface normals with a search radius of 0.05-----
+//  // ----------------------------------------------------------------
+//  pcl::NormalEstimation<pcl::PointXYZRGB, pcl::Normal> ne;
+//  ne.setInputCloud (point_cloud_ptr);
+//  pcl::search::KdTree<pcl::PointXYZRGB>::Ptr tree (new pcl::search::KdTree<pcl::PointXYZRGB> ());
+//  ne.setSearchMethod (tree);
+//  pcl::PointCloud<pcl::Normal>::Ptr cloud_normals1 (new pcl::PointCloud<pcl::Normal>);
+//  ne.setRadiusSearch (0.05);
+//  ne.compute (*cloud_normals1);
+//
+//  // ---------------------------------------------------------------
+//  // -----Calculate surface normals with a search radius of 0.1-----
+//  // ---------------------------------------------------------------
+//  pcl::PointCloud<pcl::Normal>::Ptr cloud_normals2 (new pcl::PointCloud<pcl::Normal>);
+//  ne.setRadiusSearch (0.1);
+//  ne.compute (*cloud_normals2);
 
   boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer;
   if (simple)
   {
-    viewer = simpleVis(basic_cloud_ptr);
+    viewer = simpleVis(cloud);
   }
   else if (rgb)
   {
@@ -352,18 +380,18 @@ main (int argc, char** argv)
   {
     viewer = customColourVis(basic_cloud_ptr);
   }
-  else if (normals)
-  {
-    viewer = normalsVis(point_cloud_ptr, cloud_normals2);
-  }
-  else if (shapes)
-  {
-    viewer = shapesVis(point_cloud_ptr);
-  }
-  else if (viewports)
-  {
-    viewer = viewportsVis(point_cloud_ptr, cloud_normals1, cloud_normals2);
-  }
+//  else if (normals)
+//  {
+//    viewer = normalsVis(point_cloud_ptr, cloud_normals2);
+//  }
+//  else if (shapes)
+//  {
+//    viewer = shapesVis(point_cloud_ptr);
+//  }
+//  else if (viewports)
+//  {
+//    viewer = viewportsVis(point_cloud_ptr, cloud_normals1, cloud_normals2);
+//  }
   else if (interaction_customization)
   {
     viewer = interactionCustomizationVis();
