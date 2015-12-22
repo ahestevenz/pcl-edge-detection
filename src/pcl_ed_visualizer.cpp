@@ -11,7 +11,6 @@
 #include <pcl/visualization/pcl_visualizer.h>
 #include <pcl/features/organized_edge_detection.h>
 #include <pcl/features/integral_image_normal.h>
-#include <pcl/console/parse.h>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 
@@ -20,6 +19,7 @@
 #include <pcl/io/pcd_io.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
+#include <pcl/impl/point_types.hpp>
 #include <pcl/visualization/cloud_viewer.h>
 #include <pcl/PCLPointCloud2.h>
 
@@ -29,6 +29,9 @@ using namespace pcl;
 using namespace pcl::io;
 using namespace pcl::console;
 using namespace cv;
+
+#define OK 0
+#define FAILED -1
 
 
 // --------------
@@ -137,8 +140,7 @@ boost::shared_ptr<visualization::PCLVisualizer> computeEdgeDetection (PointCloud
 // --------------
 // -----Main-----
 // --------------
-int
-main (int argc, char** argv)
+int main (int argc, char** argv)
 {
   // --------------------------------------
   // -----Parse Command Line Arguments-----
@@ -189,7 +191,7 @@ main (int argc, char** argv)
   else
   {
     printUsage (argv[0]);
-    return 0;
+    return OK;
   }
 
   // ------------------------------------
@@ -203,12 +205,12 @@ main (int argc, char** argv)
     if (loadPCDFile<PointXYZ> ("/home/ahestevenz/cloud.pcd", *cloud) == -1) //* load the file
     {
       PCL_ERROR ("Couldn't read file cloud.pcd \n");
-      return (-1);
+      return (FAILED);
     }
     if (loadPCDFile<PointXYZ> ("/home/ahestevenz/point.pcd", *point) == -1) //* load the file
     {
        PCL_ERROR ("Couldn't read file point.pcd \n");
-       return (-1);
+       return (FAILED);
     }
     cout << "Data points loaded!" << endl;
   }
@@ -216,12 +218,12 @@ main (int argc, char** argv)
   // ------------------------------------
   // -----Open the image ---------------
   // ------------------------------------
-//  Mat image;
-//  if (image_vis) //TODO: delete hard code, implements args
-//  {
-//    image = imread("/home/ahestevenz/image.png", CV_LOAD_IMAGE_ANYDEPTH | CV_LOAD_IMAGE_ANYCOLOR ); // Read the file
-//    image.convertTo(image, CV_32F); // convert the image data to float type
-//  }
+  Mat image;
+  if (image_vis) //TODO: delete hard code, implements args
+  {
+    image = imread("/home/ahestevenz/image.png", CV_LOAD_IMAGE_UNCHANGED ); // Read the file
+    image.convertTo(image, CV_32F); // convert the image data to float type
+  }
 
   // -----Build the plane ---------------
   // ------------------------------------
@@ -235,6 +237,31 @@ main (int argc, char** argv)
 
   // ------------------------------------
 
+  // ------------------------------------
+  // -----UV -> XYZ ---------------------
+  // ------------------------------------
+  pcl::PointCloud<pcl::PointXYZRGBA>::Ptr cloud_out(new pcl::PointCloud<pcl::PointXYZRGBA>);
+
+  cloud_out->width = image.cols;
+  cloud_out->height = image.rows;
+  PointXYZRGBA inserted_point;
+
+  for(int i = 0; i < image.rows; i++)
+  {
+    for(int j = 0; j < image.cols; j++)
+    {
+      cv::Vec3b& bgr = image.at<cv::Vec3b>(j,i);
+      inserted_point.r = bgr[2];
+      inserted_point.g = bgr[1];
+      inserted_point.b = bgr[0];
+      inserted_point.x = cloud->points[i*image.cols + j].x;
+      inserted_point.y = cloud->points[i*image.cols + j].y;
+      inserted_point.z = cloud->points[i*image.cols + j].z;
+      cloud_out->points.push_back(inserted_point);
+    }
+  }
+  // ------------------------------------
+
   boost::shared_ptr<visualization::PCLVisualizer> viewer;
   if (simple_vis)
   {
@@ -242,8 +269,10 @@ main (int argc, char** argv)
   }
   else if (image_vis)
   {
-//	  namedWindow( "Image", WINDOW_AUTOSIZE );// Create a window for display.
-//	  imshow( "Image", image);
+	  namedWindow( "Image", WINDOW_AUTOSIZE );// Create a window for display.
+	  imshow( "Image", image);
+	  waitKey(0);
+	  return OK;
   }
   else if (point_vis)
   {
@@ -254,7 +283,6 @@ main (int argc, char** argv)
   }
   else if (plane_vis)
   {
-	  viewer = simpleVisualisation(cloud);
 	  viewer = simpleVisualisation(cloud);
 	  viewer->addPointCloud<PointXYZ> (point, "Point");
 	  viewer->setPointCloudRenderingProperties (visualization::PCL_VISUALIZER_POINT_SIZE, 5, "Point");
